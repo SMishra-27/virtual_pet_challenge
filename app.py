@@ -1,3 +1,5 @@
+from Background_work import update_pet_status
+from database import get_connection
 from flask import Flask, render_template, request, jsonify
 from game_logic import VirtualPetML
 import database
@@ -27,6 +29,33 @@ behaviour_pet.interaction_history = []
 # Routes
 # -------------------------
 @app.route("/")
+@app.route("/status/<int:pet_id>")
+def pet_status(pet_id):
+    # Update the pet's status first
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM pets WHERE id=?", (pet_id,))
+    pet_row = cursor.fetchone()
+
+    if pet_row:
+        # Convert DB row into a dict
+        pet = {
+            "id": pet_row[0],
+            "name": pet_row[1],
+            "species": pet_row[2],
+            "hunger": pet_row[3],
+            "happiness": pet_row[4],
+            "energy": pet_row[5],
+            "last_updated": pet_row[6]
+        }
+
+        # Apply background logic
+        updated_pet = update_pet_status(pet)
+
+        return jsonify(updated_pet)
+
+    return jsonify({"error": "Pet not found"}), 404
+
 def home():
     status = pet.get_status()
     return render_template("index.html", pet=status)
